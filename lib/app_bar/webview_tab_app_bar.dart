@@ -55,31 +55,32 @@ class _WebViewTabAppBarState extends State<WebViewTabAppBar>
     ),
   );
 
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode();
-    _focusNode?.addListener(() async {
-      if (_focusNode != null &&
-          !_focusNode!.hasFocus &&
-          _searchController != null &&
-          _searchController!.text.isEmpty) {
-        var browserModel = Provider.of<BrowserModel>(context, listen: true);
-        var webViewModel = browserModel.getCurrentTab()?.webViewModel;
-        var webViewController = webViewModel?.webViewController;
-        _searchController!.text =
-            (await webViewController?.getUrl())?.toString() ?? "";
-      }
-    });
+  void addNewIncognitoTab({WebUri? url}) {
+    var browserModel = Provider.of<BrowserModel>(context, listen: false);
+    var settings = browserModel.getSettings();
+
+    url ??= settings.homePageEnabled && settings.customUrlHomePage.isNotEmpty
+        ? WebUri(settings.customUrlHomePage)
+        : WebUri(settings.searchEngine.url);
+
+    browserModel.addTab(WebViewTab(
+      key: GlobalKey(),
+      webViewModel: WebViewModel(url: url, isIncognitoMode: true),
+    ));
   }
 
-  @override
-  void dispose() {
-    _focusNode?.dispose();
-    _focusNode = null;
-    _searchController?.dispose();
-    _searchController = null;
-    super.dispose();
+  void addNewTab({WebUri? url}) {
+    var browserModel = Provider.of<BrowserModel>(context, listen: false);
+    var settings = browserModel.getSettings();
+
+    url ??= settings.homePageEnabled && settings.customUrlHomePage.isNotEmpty
+        ? WebUri(settings.customUrlHomePage)
+        : WebUri(settings.searchEngine.url);
+
+    browserModel.addTab(WebViewTab(
+      key: GlobalKey(),
+      webViewModel: WebViewModel(url: url),
+    ));
   }
 
   @override
@@ -101,16 +102,18 @@ class _WebViewTabAppBarState extends State<WebViewTabAppBar>
               builder: (context, isIncognitoMode, child) {
                 return leading != null
                     ? AppBar(
-                        backgroundColor:
-                            isIncognitoMode ? Colors.black87 : Colors.blue,
+                        backgroundColor: isIncognitoMode
+                            ? Colors.black87
+                            : const Color(0xFF3F3F47),
                         leading: _buildAppBarHomePageWidget(),
                         titleSpacing: 0.0,
                         title: _buildSearchTextField(),
                         actions: _buildActionsMenu(),
                       )
                     : AppBar(
-                        backgroundColor:
-                            isIncognitoMode ? Colors.black87 : Colors.blue,
+                        backgroundColor: isIncognitoMode
+                            ? Colors.black87
+                            : const Color(0xFF3F3F47),
                         titleSpacing: 10.0,
                         title: _buildSearchTextField(),
                         actions: _buildActionsMenu(),
@@ -119,106 +122,338 @@ class _WebViewTabAppBarState extends State<WebViewTabAppBar>
         });
   }
 
-  Widget? _buildAppBarHomePageWidget() {
-    var browserModel = Provider.of<BrowserModel>(context, listen: true);
-    var settings = browserModel.getSettings();
+  @override
+  void dispose() {
+    _focusNode?.dispose();
+    _focusNode = null;
+    _searchController?.dispose();
+    _searchController = null;
+    super.dispose();
+  }
 
-    var webViewModel = Provider.of<WebViewModel>(context, listen: true);
-    var webViewController = webViewModel.webViewController;
+  void goToDevelopersPage() {
+    Navigator.push(context,
+        MaterialPageRoute(builder: (context) => const DevelopersPage()));
+  }
 
-    if (!settings.homePageEnabled) {
-      return null;
+  void goToSettingsPage() {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (context) => const SettingsPage()));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode?.addListener(() async {
+      if (_focusNode != null &&
+          !_focusNode!.hasFocus &&
+          _searchController != null &&
+          _searchController!.text.isEmpty) {
+        var browserModel = Provider.of<BrowserModel>(context, listen: true);
+        var webViewModel = browserModel.getCurrentTab()?.webViewModel;
+        var webViewController = webViewModel?.webViewController;
+        _searchController!.text =
+            (await webViewController?.getUrl())?.toString() ?? "";
+      }
+    });
+  }
+
+  void openProjectPopup() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: false,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const ProjectInfoPopup();
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+    );
+  }
+
+  void share() {
+    var browserModel = Provider.of<BrowserModel>(context, listen: false);
+    var webViewModel = browserModel.getCurrentTab()?.webViewModel;
+    var url = webViewModel?.url;
+    if (url != null) {
+      Share.share(url.toString(), subject: webViewModel?.title);
+    }
+  }
+
+  void showFavorites() {
+    showDialog(
+        context: context,
+        builder: (context) {
+          var browserModel = Provider.of<BrowserModel>(context, listen: true);
+
+          return AlertDialog(
+              contentPadding: const EdgeInsets.all(0.0),
+              content: SizedBox(
+                  width: double.maxFinite,
+                  child: ListView(
+                    children: browserModel.favorites.map((favorite) {
+                      var url = favorite.url;
+                      var faviconUrl = favorite.favicon != null
+                          ? favorite.favicon!.url
+                          : WebUri("${url?.origin ?? ""}/favicon.ico");
+
+                      return ListTile(
+                        leading: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            // CachedNetworkImage(
+                            //   placeholder: (context, url) =>
+                            //       CircularProgressIndicator(),
+                            //   imageUrl: faviconUrl,
+                            //   height: 30,
+                            // )
+                            CustomImage(
+                              url: faviconUrl,
+                              maxWidth: 30.0,
+                              height: 30.0,
+                            )
+                          ],
+                        ),
+                        title: Text(
+                            favorite.title ?? favorite.url?.toString() ?? "",
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis),
+                        subtitle: Text(favorite.url?.toString() ?? "",
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                        isThreeLine: true,
+                        onTap: () {
+                          setState(() {
+                            addNewTab(url: favorite.url);
+                            Navigator.pop(context);
+                          });
+                        },
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 20.0),
+                              onPressed: () {
+                                setState(() {
+                                  browserModel.removeFavorite(favorite);
+                                  if (browserModel.favorites.isEmpty) {
+                                    Navigator.pop(context);
+                                  }
+                                });
+                              },
+                            )
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  )));
+        });
+  }
+
+  void showHistory() {
+    showDialog(
+        context: context,
+        builder: (context) {
+          var webViewModel = Provider.of<WebViewModel>(context, listen: true);
+
+          return AlertDialog(
+              contentPadding: const EdgeInsets.all(0.0),
+              content: FutureBuilder(
+                future:
+                    webViewModel.webViewController?.getCopyBackForwardList(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return Container();
+                  }
+
+                  WebHistory history = snapshot.data as WebHistory;
+                  return SizedBox(
+                      width: double.maxFinite,
+                      child: ListView(
+                        children: history.list?.reversed.map((historyItem) {
+                              var url = historyItem.url;
+
+                              return ListTile(
+                                leading: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    // CachedNetworkImage(
+                                    //   placeholder: (context, url) =>
+                                    //       CircularProgressIndicator(),
+                                    //   imageUrl: (url?.origin ?? "") + "/favicon.ico",
+                                    //   height: 30,
+                                    // )
+                                    CustomImage(
+                                        url: WebUri(
+                                            "${url?.origin ?? ""}/favicon.ico"),
+                                        maxWidth: 30.0,
+                                        height: 30.0)
+                                  ],
+                                ),
+                                title: Text(historyItem.title ?? url.toString(),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis),
+                                subtitle: Text(url?.toString() ?? "",
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis),
+                                isThreeLine: true,
+                                onTap: () {
+                                  webViewModel.webViewController
+                                      ?.goTo(historyItem: historyItem);
+                                  Navigator.pop(context);
+                                },
+                              );
+                            }).toList() ??
+                            <Widget>[],
+                      ));
+                },
+              ));
+        });
+  }
+
+  void showUrlInfo() {
+    var webViewModel = Provider.of<WebViewModel>(context, listen: false);
+    var url = webViewModel.url;
+    if (url == null || url.toString().isEmpty) {
+      return;
     }
 
-    return IconButton(
-      icon: const Icon(Icons.home),
-      onPressed: () {
-        if (webViewController != null) {
-          var url =
-              settings.homePageEnabled && settings.customUrlHomePage.isNotEmpty
-                  ? WebUri(settings.customUrlHomePage)
-                  : WebUri(settings.searchEngine.url);
-          webViewController.loadUrl(urlRequest: URLRequest(url: url));
-        } else {
-          addNewTab();
-        }
+    route = CustomPopupDialog.show(
+      context: context,
+      transitionDuration: customPopupDialogTransitionDuration,
+      builder: (context) {
+        return UrlInfoPopup(
+          route: route!,
+          transitionDuration: customPopupDialogTransitionDuration,
+          onWebViewTabSettingsClicked: () {
+            goToSettingsPage();
+          },
+        );
       },
     );
   }
 
-  Widget _buildSearchTextField() {
-    var browserModel = Provider.of<BrowserModel>(context, listen: true);
-    var settings = browserModel.getSettings();
+  void showWebArchives() async {
+    showDialog(
+        context: context,
+        builder: (context) {
+          var browserModel = Provider.of<BrowserModel>(context, listen: true);
+          var webArchives = browserModel.webArchives;
 
-    var webViewModel = Provider.of<WebViewModel>(context, listen: true);
-    var webViewController = webViewModel.webViewController;
+          var listViewChildren = <Widget>[];
+          webArchives.forEach((key, webArchive) {
+            var path = webArchive.path;
+            // String fileName = path.substring(path.lastIndexOf('/') + 1);
 
-    return SizedBox(
-      height: 40.0,
-      child: Stack(
-        children: <Widget>[
-          TextField(
-            onSubmitted: (value) {
-              var url = WebUri(value.trim());
-              if (!url.scheme.startsWith("http") &&
-                  !Util.isLocalizedContent(url)) {
-                url = WebUri(settings.searchEngine.searchUrl + value);
-              }
+            var url = webArchive.url;
 
-              if (webViewController != null) {
-                webViewController.loadUrl(urlRequest: URLRequest(url: url));
-              } else {
-                addNewTab(url: url);
-                webViewModel.url = url;
-              }
-            },
-            keyboardType: TextInputType.url,
-            focusNode: _focusNode,
-            autofocus: false,
-            controller: _searchController,
-            textInputAction: TextInputAction.go,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.only(
-                  left: 45.0, top: 10.0, right: 10.0, bottom: 10.0),
-              filled: true,
-              fillColor: Colors.white,
-              border: outlineBorder,
-              focusedBorder: outlineBorder,
-              enabledBorder: outlineBorder,
-              hintText: "Search for or type a web address",
-              hintStyle: const TextStyle(color: Colors.black54, fontSize: 16.0),
-            ),
-            style: const TextStyle(color: Colors.black, fontSize: 16.0),
-          ),
-          IconButton(
-            icon: Selector<WebViewModel, bool>(
-              selector: (context, webViewModel) => webViewModel.isSecure,
-              builder: (context, isSecure, child) {
-                var icon = Icons.info_outline;
-                if (webViewModel.isIncognitoMode) {
-                  icon = MaterialCommunityIcons.incognito;
-                } else if (isSecure) {
-                  if (webViewModel.url != null &&
-                      webViewModel.url!.scheme == "file") {
-                    icon = Icons.offline_pin;
-                  } else {
-                    icon = Icons.lock;
-                  }
+            listViewChildren.add(ListTile(
+              leading: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  // CachedNetworkImage(
+                  //   placeholder: (context, url) => CircularProgressIndicator(),
+                  //   imageUrl: (url?.origin ?? "") + "/favicon.ico",
+                  //   height: 30,
+                  // )
+                  CustomImage(
+                      url: WebUri("${url?.origin ?? ""}/favicon.ico"),
+                      maxWidth: 30.0,
+                      height: 30.0)
+                ],
+              ),
+              title: Text(webArchive.title ?? url?.toString() ?? "",
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+              subtitle: Text(url?.toString() ?? "",
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: () async {
+                  setState(() {
+                    browserModel.removeWebArchive(webArchive);
+                    browserModel.save();
+                  });
+                },
+              ),
+              isThreeLine: true,
+              onTap: () {
+                if (path != null) {
+                  var browserModel =
+                      Provider.of<BrowserModel>(context, listen: false);
+                  browserModel.addTab(WebViewTab(
+                    key: GlobalKey(),
+                    webViewModel: WebViewModel(url: WebUri("file://$path")),
+                  ));
                 }
-
-                return Icon(
-                  icon,
-                  color: isSecure ? Colors.green : Colors.grey,
-                );
+                Navigator.pop(context);
               },
-            ),
-            onPressed: () {
-              showUrlInfo();
-            },
-          ),
-        ],
-      ),
-    );
+            ));
+          });
+
+          return AlertDialog(
+              contentPadding: const EdgeInsets.all(0.0),
+              content: Builder(
+                builder: (context) {
+                  return SizedBox(
+                      width: double.maxFinite,
+                      child: ListView(
+                        children: listViewChildren,
+                      ));
+                },
+              ));
+        });
+  }
+
+  void takeScreenshotAndShow() async {
+    var webViewModel = Provider.of<WebViewModel>(context, listen: false);
+    var screenshot = await webViewModel.webViewController?.takeScreenshot();
+
+    if (screenshot != null) {
+      var dir = await getApplicationDocumentsDirectory();
+      File file = File(
+          "${dir.path}/screenshot_${DateTime.now().microsecondsSinceEpoch}.png");
+      await file.writeAsBytes(screenshot);
+
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            content: Image.memory(screenshot),
+            actions: <Widget>[
+              ElevatedButton(
+                child: const Text("Share"),
+                onPressed: () async {
+                  await ShareExtend.share(file.path, "image");
+                },
+              )
+            ],
+          );
+        },
+      );
+
+      file.delete();
+    }
+  }
+
+  void toggleDesktopMode() async {
+    var browserModel = Provider.of<BrowserModel>(context, listen: false);
+    var webViewModel = browserModel.getCurrentTab()?.webViewModel;
+    var webViewController = webViewModel?.webViewController;
+
+    var currentWebViewModel = Provider.of<WebViewModel>(context, listen: false);
+
+    if (webViewController != null) {
+      webViewModel?.isDesktopMode = !webViewModel.isDesktopMode;
+      currentWebViewModel.isDesktopMode = webViewModel?.isDesktopMode ?? false;
+
+      var currentSettings = await webViewController.getSettings();
+      if (currentSettings != null) {
+        currentSettings.preferredContentMode =
+            webViewModel?.isDesktopMode ?? false
+                ? UserPreferredContentMode.DESKTOP
+                : UserPreferredContentMode.RECOMMENDED;
+        await webViewController.setSettings(settings: currentSettings);
+      }
+      await webViewController.reload();
+    }
   }
 
   List<Widget> _buildActionsMenu() {
@@ -704,6 +939,108 @@ class _WebViewTabAppBarState extends State<WebViewTabAppBar>
     ];
   }
 
+  Widget? _buildAppBarHomePageWidget() {
+    var browserModel = Provider.of<BrowserModel>(context, listen: true);
+    var settings = browserModel.getSettings();
+
+    var webViewModel = Provider.of<WebViewModel>(context, listen: true);
+    var webViewController = webViewModel.webViewController;
+
+    if (!settings.homePageEnabled) {
+      return null;
+    }
+
+    return IconButton(
+      icon: const Icon(Icons.home),
+      onPressed: () {
+        if (webViewController != null) {
+          var url =
+              settings.homePageEnabled && settings.customUrlHomePage.isNotEmpty
+                  ? WebUri(settings.customUrlHomePage)
+                  : WebUri(settings.searchEngine.url);
+          webViewController.loadUrl(urlRequest: URLRequest(url: url));
+        } else {
+          addNewTab();
+        }
+      },
+    );
+  }
+
+  Widget _buildSearchTextField() {
+    var browserModel = Provider.of<BrowserModel>(context, listen: true);
+    var settings = browserModel.getSettings();
+
+    var webViewModel = Provider.of<WebViewModel>(context, listen: true);
+    var webViewController = webViewModel.webViewController;
+
+    return SizedBox(
+      height: 40.0,
+      child: Stack(
+        children: <Widget>[
+          TextField(
+            onSubmitted: (value) {
+              var url = WebUri(value.trim());
+              if (!url.scheme.startsWith("http") &&
+                  !Util.isLocalizedContent(url)) {
+                url = WebUri(settings.searchEngine.searchUrl + value);
+              }
+
+              if (webViewController != null) {
+                webViewController.loadUrl(urlRequest: URLRequest(url: url));
+              } else {
+                addNewTab(url: url);
+                webViewModel.url = url;
+              }
+            },
+            keyboardType: TextInputType.url,
+            focusNode: _focusNode,
+            autofocus: false,
+            controller: _searchController,
+            textInputAction: TextInputAction.go,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.only(
+                  left: 45.0, top: 10.0, right: 10.0, bottom: 10.0),
+              filled: true,
+              fillColor: Colors.white,
+              border: outlineBorder,
+              focusedBorder: outlineBorder,
+              enabledBorder: outlineBorder,
+              hintText: "Search for or type a web address",
+              hintStyle: const TextStyle(color: Colors.black54, fontSize: 16.0),
+            ),
+            style: const TextStyle(color: Colors.black, fontSize: 16.0),
+          ),
+          IconButton(
+            icon: Selector<WebViewModel, bool>(
+              selector: (context, webViewModel) => webViewModel.isSecure,
+              builder: (context, isSecure, child) {
+                var icon = Icons.info_outline;
+                if (webViewModel.isIncognitoMode) {
+                  icon = MaterialCommunityIcons.incognito;
+                } else if (isSecure) {
+                  if (webViewModel.url != null &&
+                      webViewModel.url!.scheme == "file") {
+                    icon = Icons.offline_pin;
+                  } else {
+                    icon = Icons.lock;
+                  }
+                }
+
+                return Icon(
+                  icon,
+                  color: isSecure ? Colors.green : Colors.grey,
+                );
+              },
+            ),
+            onPressed: () {
+              showUrlInfo();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   void _popupMenuChoiceAction(String choice) async {
     var currentWebViewModel = Provider.of<WebViewModel>(context, listen: false);
 
@@ -724,9 +1061,13 @@ class _WebViewTabAppBarState extends State<WebViewTabAppBar>
         showWebArchives();
         break;
       case PopupMenuActions.FIND_ON_PAGE:
-        var isFindInteractionEnabled = currentWebViewModel.settings?.isFindInteractionEnabled ?? false;
-        var findInteractionController = currentWebViewModel.findInteractionController;
-        if (Util.isIOS() && isFindInteractionEnabled && findInteractionController != null) {
+        var isFindInteractionEnabled =
+            currentWebViewModel.settings?.isFindInteractionEnabled ?? false;
+        var findInteractionController =
+            currentWebViewModel.findInteractionController;
+        if (Util.isIOS() &&
+            isFindInteractionEnabled &&
+            findInteractionController != null) {
           await findInteractionController.presentFindNavigator();
         } else if (widget.showFindOnPage != null) {
           widget.showFindOnPage!();
@@ -753,340 +1094,6 @@ class _WebViewTabAppBarState extends State<WebViewTabAppBar>
           openProjectPopup();
         });
         break;
-    }
-  }
-
-  void addNewTab({WebUri? url}) {
-    var browserModel = Provider.of<BrowserModel>(context, listen: false);
-    var settings = browserModel.getSettings();
-
-    url ??= settings.homePageEnabled && settings.customUrlHomePage.isNotEmpty
-        ? WebUri(settings.customUrlHomePage)
-        : WebUri(settings.searchEngine.url);
-
-    browserModel.addTab(WebViewTab(
-      key: GlobalKey(),
-      webViewModel: WebViewModel(url: url),
-    ));
-  }
-
-  void addNewIncognitoTab({WebUri? url}) {
-    var browserModel = Provider.of<BrowserModel>(context, listen: false);
-    var settings = browserModel.getSettings();
-
-    url ??= settings.homePageEnabled && settings.customUrlHomePage.isNotEmpty
-        ? WebUri(settings.customUrlHomePage)
-        : WebUri(settings.searchEngine.url);
-
-    browserModel.addTab(WebViewTab(
-      key: GlobalKey(),
-      webViewModel: WebViewModel(url: url, isIncognitoMode: true),
-    ));
-  }
-
-  void showFavorites() {
-    showDialog(
-        context: context,
-        builder: (context) {
-          var browserModel = Provider.of<BrowserModel>(context, listen: true);
-
-          return AlertDialog(
-              contentPadding: const EdgeInsets.all(0.0),
-              content: SizedBox(
-                  width: double.maxFinite,
-                  child: ListView(
-                    children: browserModel.favorites.map((favorite) {
-                      var url = favorite.url;
-                      var faviconUrl = favorite.favicon != null
-                          ? favorite.favicon!.url
-                          : WebUri("${url?.origin ?? ""}/favicon.ico");
-
-                      return ListTile(
-                        leading: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            // CachedNetworkImage(
-                            //   placeholder: (context, url) =>
-                            //       CircularProgressIndicator(),
-                            //   imageUrl: faviconUrl,
-                            //   height: 30,
-                            // )
-                            CustomImage(
-                              url: faviconUrl,
-                              maxWidth: 30.0,
-                              height: 30.0,
-                            )
-                          ],
-                        ),
-                        title: Text(
-                            favorite.title ?? favorite.url?.toString() ?? "",
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis),
-                        subtitle: Text(favorite.url?.toString() ?? "",
-                            maxLines: 2, overflow: TextOverflow.ellipsis),
-                        isThreeLine: true,
-                        onTap: () {
-                          setState(() {
-                            addNewTab(url: favorite.url);
-                            Navigator.pop(context);
-                          });
-                        },
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 20.0),
-                              onPressed: () {
-                                setState(() {
-                                  browserModel.removeFavorite(favorite);
-                                  if (browserModel.favorites.isEmpty) {
-                                    Navigator.pop(context);
-                                  }
-                                });
-                              },
-                            )
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  )));
-        });
-  }
-
-  void showHistory() {
-    showDialog(
-        context: context,
-        builder: (context) {
-          var webViewModel = Provider.of<WebViewModel>(context, listen: true);
-
-          return AlertDialog(
-              contentPadding: const EdgeInsets.all(0.0),
-              content: FutureBuilder(
-                future:
-                    webViewModel.webViewController?.getCopyBackForwardList(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return Container();
-                  }
-
-                  WebHistory history = snapshot.data as WebHistory;
-                  return SizedBox(
-                      width: double.maxFinite,
-                      child: ListView(
-                        children: history.list?.reversed.map((historyItem) {
-                              var url = historyItem.url;
-
-                              return ListTile(
-                                leading: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: <Widget>[
-                                    // CachedNetworkImage(
-                                    //   placeholder: (context, url) =>
-                                    //       CircularProgressIndicator(),
-                                    //   imageUrl: (url?.origin ?? "") + "/favicon.ico",
-                                    //   height: 30,
-                                    // )
-                                    CustomImage(
-                                        url: WebUri(
-                                            "${url?.origin ?? ""}/favicon.ico"),
-                                        maxWidth: 30.0,
-                                        height: 30.0)
-                                  ],
-                                ),
-                                title: Text(historyItem.title ?? url.toString(),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis),
-                                subtitle: Text(url?.toString() ?? "",
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis),
-                                isThreeLine: true,
-                                onTap: () {
-                                  webViewModel.webViewController
-                                      ?.goTo(historyItem: historyItem);
-                                  Navigator.pop(context);
-                                },
-                              );
-                            }).toList() ??
-                            <Widget>[],
-                      ));
-                },
-              ));
-        });
-  }
-
-  void showWebArchives() async {
-    showDialog(
-        context: context,
-        builder: (context) {
-          var browserModel = Provider.of<BrowserModel>(context, listen: true);
-          var webArchives = browserModel.webArchives;
-
-          var listViewChildren = <Widget>[];
-          webArchives.forEach((key, webArchive) {
-            var path = webArchive.path;
-            // String fileName = path.substring(path.lastIndexOf('/') + 1);
-
-            var url = webArchive.url;
-
-            listViewChildren.add(ListTile(
-              leading: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  // CachedNetworkImage(
-                  //   placeholder: (context, url) => CircularProgressIndicator(),
-                  //   imageUrl: (url?.origin ?? "") + "/favicon.ico",
-                  //   height: 30,
-                  // )
-                  CustomImage(
-                      url: WebUri("${url?.origin ?? ""}/favicon.ico"),
-                      maxWidth: 30.0,
-                      height: 30.0)
-                ],
-              ),
-              title: Text(webArchive.title ?? url?.toString() ?? "",
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text(url?.toString() ?? "",
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () async {
-                  setState(() {
-                    browserModel.removeWebArchive(webArchive);
-                    browserModel.save();
-                  });
-                },
-              ),
-              isThreeLine: true,
-              onTap: () {
-                if (path != null) {
-                  var browserModel =
-                      Provider.of<BrowserModel>(context, listen: false);
-                  browserModel.addTab(WebViewTab(
-                    key: GlobalKey(),
-                    webViewModel: WebViewModel(url: WebUri("file://$path")),
-                  ));
-                }
-                Navigator.pop(context);
-              },
-            ));
-          });
-
-          return AlertDialog(
-              contentPadding: const EdgeInsets.all(0.0),
-              content: Builder(
-                builder: (context) {
-                  return SizedBox(
-                      width: double.maxFinite,
-                      child: ListView(
-                        children: listViewChildren,
-                      ));
-                },
-              ));
-        });
-  }
-
-  void share() {
-    var browserModel = Provider.of<BrowserModel>(context, listen: false);
-    var webViewModel = browserModel.getCurrentTab()?.webViewModel;
-    var url = webViewModel?.url;
-    if (url != null) {
-      Share.share(url.toString(), subject: webViewModel?.title);
-    }
-  }
-
-  void toggleDesktopMode() async {
-    var browserModel = Provider.of<BrowserModel>(context, listen: false);
-    var webViewModel = browserModel.getCurrentTab()?.webViewModel;
-    var webViewController = webViewModel?.webViewController;
-
-    var currentWebViewModel = Provider.of<WebViewModel>(context, listen: false);
-
-    if (webViewController != null) {
-      webViewModel?.isDesktopMode = !webViewModel.isDesktopMode;
-      currentWebViewModel.isDesktopMode = webViewModel?.isDesktopMode ?? false;
-
-      var currentSettings = await webViewController.getSettings();
-      if (currentSettings != null) {
-        currentSettings.preferredContentMode = webViewModel?.isDesktopMode ?? false
-            ? UserPreferredContentMode.DESKTOP
-            : UserPreferredContentMode.RECOMMENDED;
-        await webViewController.setSettings(settings: currentSettings);
-      }
-      await webViewController.reload();
-    }
-  }
-
-  void showUrlInfo() {
-    var webViewModel = Provider.of<WebViewModel>(context, listen: false);
-    var url = webViewModel.url;
-    if (url == null || url.toString().isEmpty) {
-      return;
-    }
-
-    route = CustomPopupDialog.show(
-      context: context,
-      transitionDuration: customPopupDialogTransitionDuration,
-      builder: (context) {
-        return UrlInfoPopup(
-          route: route!,
-          transitionDuration: customPopupDialogTransitionDuration,
-          onWebViewTabSettingsClicked: () {
-            goToSettingsPage();
-          },
-        );
-      },
-    );
-  }
-
-  void goToDevelopersPage() {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (context) => const DevelopersPage()));
-  }
-
-  void goToSettingsPage() {
-    Navigator.push(
-        context, MaterialPageRoute(builder: (context) => const SettingsPage()));
-  }
-
-  void openProjectPopup() {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: false,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return const ProjectInfoPopup();
-      },
-      transitionDuration: const Duration(milliseconds: 300),
-    );
-  }
-
-  void takeScreenshotAndShow() async {
-    var webViewModel = Provider.of<WebViewModel>(context, listen: false);
-    var screenshot = await webViewModel.webViewController?.takeScreenshot();
-
-    if (screenshot != null) {
-      var dir = await getApplicationDocumentsDirectory();
-      File file = File(
-          "${dir.path}/screenshot_${DateTime.now().microsecondsSinceEpoch}.png");
-      await file.writeAsBytes(screenshot);
-
-      await showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            content: Image.memory(screenshot),
-            actions: <Widget>[
-              ElevatedButton(
-                child: const Text("Share"),
-                onPressed: () async {
-                  await ShareExtend.share(file.path, "image");
-                },
-              )
-            ],
-          );
-        },
-      );
-
-      file.delete();
     }
   }
 }

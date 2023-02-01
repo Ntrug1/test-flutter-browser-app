@@ -3,10 +3,10 @@ import 'dart:async';
 // import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_browser/custom_image.dart';
-import 'package:flutter_browser/tab_viewer.dart';
 import 'package:flutter_browser/app_bar/browser_app_bar.dart';
+import 'package:flutter_browser/custom_image.dart';
 import 'package:flutter_browser/models/webview_model.dart';
+import 'package:flutter_browser/tab_viewer.dart';
 import 'package:flutter_browser/util.dart';
 import 'package:flutter_browser/webview_tab.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -30,9 +30,23 @@ class _BrowserState extends State<Browser> with SingleTickerProviderStateMixin {
   var _isRestored = false;
 
   @override
-  void initState() {
-    super.initState();
-    getIntentData();
+  Widget build(BuildContext context) {
+    return _buildBrowser();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isRestored) {
+      _isRestored = true;
+      restore();
+    }
+    precacheImage(const AssetImage("assets/icon/icon.png"), context);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   getIntentData() async {
@@ -51,28 +65,14 @@ class _BrowserState extends State<Browser> with SingleTickerProviderStateMixin {
   }
 
   @override
-  void dispose() {
-    super.dispose();
+  void initState() {
+    super.initState();
+    getIntentData();
   }
 
   restore() async {
     var browserModel = Provider.of<BrowserModel>(context, listen: true);
     browserModel.restore();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isRestored) {
-      _isRestored = true;
-      restore();
-    }
-    precacheImage(const AssetImage("assets/icon/icon.png"), context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _buildBrowser();
   }
 
   Widget _buildBrowser() {
@@ -170,23 +170,6 @@ class _BrowserState extends State<Browser> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _createProgressIndicator() {
-    return Selector<WebViewModel, double>(
-        selector: (context, webViewModel) => webViewModel.progress,
-        builder: (context, progress, child) {
-          if (progress >= 1.0) {
-            return Container();
-          }
-          return PreferredSize(
-              preferredSize: const Size(double.infinity, 4.0),
-              child: SizedBox(
-                  height: 4.0,
-                  child: LinearProgressIndicator(
-                    value: progress,
-                  )));
-        });
-  }
-
   Widget _buildWebViewTabsViewer() {
     var browserModel = Provider.of<BrowserModel>(context, listen: true);
 
@@ -225,7 +208,7 @@ class _BrowserState extends State<Browser> with SingleTickerProviderStateMixin {
                   children: <Widget>[
                     Material(
                       color: isCurrentTab
-                          ? Colors.blue
+                          ? const Color(0xFF3F3F47)
                           : (webViewTab.webViewModel.isIncognitoMode
                               ? Colors.black
                               : Colors.white),
@@ -310,5 +293,22 @@ class _BrowserState extends State<Browser> with SingleTickerProviderStateMixin {
                 browserModel.showTab(index);
               },
             )));
+  }
+
+  Widget _createProgressIndicator() {
+    return Selector<WebViewModel, double>(
+        selector: (context, webViewModel) => webViewModel.progress,
+        builder: (context, progress, child) {
+          if (progress >= 1.0) {
+            return Container();
+          }
+          return PreferredSize(
+              preferredSize: const Size(double.infinity, 4.0),
+              child: SizedBox(
+                  height: 4.0,
+                  child: LinearProgressIndicator(
+                    value: progress,
+                  )));
+        });
   }
 }
