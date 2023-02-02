@@ -133,7 +133,48 @@ class _BrowserState extends State<Browser> with SingleTickerProviderStateMixin {
             }
           },
           child: Scaffold(
-              appBar: const BrowserAppBar(), body: _buildWebViewTabsContent()),
+            appBar: const BrowserAppBar(),
+            body: _buildWebViewTabsContent(),
+            bottomNavigationBar: BottomNavigationBar(
+                showSelectedLabels: false,
+                showUnselectedLabels: false,
+                type: BottomNavigationBarType.fixed,
+                backgroundColor: const Color(0xFF3F3F47),
+                selectedItemColor: Colors.white,
+                unselectedItemColor: Colors.white,
+                items: [
+                  BottomNavigationBarItem(
+                      icon: IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      label: 'Back'),
+                  BottomNavigationBarItem(
+                      icon: IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.home_mini_rounded),
+                      ),
+                      label: 'Back'),
+                  BottomNavigationBarItem(
+                      icon: IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.menu),
+                      ),
+                      label: 'Back'),
+                  BottomNavigationBarItem(
+                      icon: IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.file_download_rounded),
+                      ),
+                      label: 'Back'),
+                  BottomNavigationBarItem(
+                      icon: IconButton(
+                        onPressed: () {},
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      label: 'Back'),
+                ]),
+          ),
         ));
   }
 
@@ -185,8 +226,8 @@ class _BrowserState extends State<Browser> with SingleTickerProviderStateMixin {
               children: browserModel.webViewTabs.map((webViewTab) {
                 webViewTabStateKey.currentState?.pause();
                 var screenshotData = webViewTab.webViewModel.screenshot;
-                Widget screenshotImage = Container(
-                  decoration: const BoxDecoration(color: Colors.white),
+                Widget screenshotImage = SizedBox(
+                  // decoration: const BoxDecoration(color: Colors.white),
                   width: double.infinity,
                   child: screenshotData != null
                       ? Image.memory(screenshotData)
