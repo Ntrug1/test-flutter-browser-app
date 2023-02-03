@@ -332,6 +332,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "scroll_shadow_container",
+      "rootUri": "file:///Users/trungnguyen/FlutterDev/flutter/.pub-cache/hosted/pub.dartlang.org/scroll_shadow_container-2.1.1+2",
+      "packageUri": "lib/",
+      "languageVersion": "2.16"
+    },
+    {
       "name": "share_extend",
       "rootUri": "file:///Users/trungnguyen/FlutterDev/flutter/.pub-cache/hosted/pub.dartlang.org/share_extend-2.0.0",
       "packageUri": "lib/",
@@ -426,6 +432,12 @@
       "rootUri": "file:///Users/trungnguyen/FlutterDev/flutter/.pub-cache/hosted/pub.dartlang.org/string_scanner-1.1.1",
       "packageUri": "lib/",
       "languageVersion": "2.12"
+    },
+    {
+      "name": "tab_switcher",
+      "rootUri": "file:///Users/trungnguyen/FlutterDev/flutter/.pub-cache/hosted/pub.dartlang.org/tab_switcher-1.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.16"
     },
     {
       "name": "term_glyph",
@@ -530,7 +542,7 @@
       "languageVersion": "2.18"
     }
   ],
-  "generated": "2022-12-30T09:27:25.524718Z",
+  "generated": "2023-02-03T03:43:42.677622Z",
   "generator": "pub",
   "generatorVersion": "2.18.6"
 }

@@ -9,25 +9,6 @@ import 'package:provider/provider.dart';
 
 import 'browser.dart';
 
-// ignore: non_constant_identifier_names
-late final String WEB_ARCHIVE_DIR;
-// ignore: non_constant_identifier_names
-late final double TAB_VIEWER_BOTTOM_OFFSET_1;
-// ignore: non_constant_identifier_names
-late final double TAB_VIEWER_BOTTOM_OFFSET_2;
-// ignore: non_constant_identifier_names
-late final double TAB_VIEWER_BOTTOM_OFFSET_3;
-// ignore: constant_identifier_names
-const double TAB_VIEWER_TOP_OFFSET_1 = 0.0;
-// ignore: constant_identifier_names
-const double TAB_VIEWER_TOP_OFFSET_2 = 10.0;
-// ignore: constant_identifier_names
-const double TAB_VIEWER_TOP_OFFSET_3 = 20.0;
-// ignore: constant_identifier_names
-const double TAB_VIEWER_TOP_SCALE_TOP_OFFSET = 250.0;
-// ignore: constant_identifier_names
-const double TAB_VIEWER_TOP_SCALE_BOTTOM_OFFSET = 230.0;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -37,9 +18,7 @@ void main() async {
   TAB_VIEWER_BOTTOM_OFFSET_2 = 140.0;
   TAB_VIEWER_BOTTOM_OFFSET_3 = 150.0;
 
-  await FlutterDownloader.initialize(
-    debug: kDebugMode
-  );
+  await FlutterDownloader.initialize(debug: kDebugMode);
 
   await Permission.camera.request();
   await Permission.microphone.request();
@@ -64,6 +43,26 @@ void main() async {
   );
 }
 
+// ignore: constant_identifier_names
+const double TAB_VIEWER_TOP_OFFSET_1 = 0.0;
+// ignore: constant_identifier_names
+const double TAB_VIEWER_TOP_OFFSET_2 = 10.0;
+// ignore: constant_identifier_names
+const double TAB_VIEWER_TOP_OFFSET_3 = 20.0;
+// ignore: constant_identifier_names
+const double TAB_VIEWER_TOP_SCALE_BOTTOM_OFFSET = 230.0;
+// ignore: constant_identifier_names
+const double TAB_VIEWER_TOP_SCALE_TOP_OFFSET = 250.0;
+// ignore: non_constant_identifier_names
+late final double TAB_VIEWER_BOTTOM_OFFSET_1;
+// ignore: non_constant_identifier_names
+late final double TAB_VIEWER_BOTTOM_OFFSET_2;
+// ignore: non_constant_identifier_names
+late final double TAB_VIEWER_BOTTOM_OFFSET_3;
+
+// ignore: non_constant_identifier_names
+late final String WEB_ARCHIVE_DIR;
+
 class FlutterBrowserApp extends StatelessWidget {
   const FlutterBrowserApp({super.key});
 
@@ -72,13 +71,17 @@ class FlutterBrowserApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Browser',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
+          primarySwatch: Colors.blueGrey,
+          // visualDensity: VisualDensity.adaptivePlatformDensity,
+          brightness: Settings.brightness),
       initialRoute: '/',
       routes: {
         '/': (context) => const Browser(),
       },
     );
   }
+}
+
+class Settings {
+  static Brightness brightness = Brightness.dark;
 }

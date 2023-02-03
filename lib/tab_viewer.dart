@@ -144,13 +144,13 @@ class _TabViewerState extends State<TabViewer>
                   transform: Matrix4.identity()..scale(scale, scale),
                   alignment: Alignment.topCenter,
                   child: Container(
-                      // decoration: BoxDecoration(boxShadow: [
-                      //   BoxShadow(
-                      //     color: Colors.black.withOpacity(opacity),
-                      //     spreadRadius: 5,
-                      //     blurRadius: 5,
-                      //   ),
-                      // ]),
+                      decoration: BoxDecoration(boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(opacity),
+                          spreadRadius: 5,
+                          blurRadius: 5,
+                        ),
+                      ]),
                       child: tab),
                 ),
               );
